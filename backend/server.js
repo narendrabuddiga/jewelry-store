@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
-const { connectMongoose, isConnected, closeConnection } = require('./config/database');
+const { connectMongoose, isConnected, closeConnection, keepAlive } = require('./config/database');
 const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const statusRoutes = require('./routes/statusRoutes');
@@ -43,6 +43,9 @@ const startServer = async () => {
     
     // Connect to database with caching
     await connectMongoose();
+    
+    // Start keep-alive mechanism
+    keepAlive();
     
     const server = app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server running on port ${PORT}`);
