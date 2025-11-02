@@ -1,28 +1,29 @@
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const mongoose = require('mongoose');
-import * as fs from 'fs';
-import * as os from 'os';
-import * as path from 'path';
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 require('dotenv').config();
 
-const credentials = process.env.MONGO_DB_CERD_PEM || './X509-cert.pem';
 const MONGO_URI = process.env.MONGO_URI;
 const DB_NAME = process.env.DB_NAME || 'jewelryStore';
 
 // Define the path for the local fallback file
-const fallbackCertPath = path.join(process.cwd(), './X509-cert.pem');
+const fallbackCertPath = path.join(process.cwd(), 'X509-cert-7200026180222304758.pem');
 
 // Determine if we are using an environment variable or a local file
 let credentialsPath;
 
 if (process.env.MONGO_DB_CERD_PEM) {
-  // 1. Create a temporary file path
-  // Use os.tmpdir() to ensure you write to a directory the process has permission for (especially in serverless environments)
+  // Create a temporary file path
   const tempFilePath = path.join(os.tmpdir(), `temp-cert-${Date.now()}.pem`);
   
-  // 2. Write the environment variable content to the temporary file
+  // Convert \n escape sequences to actual newlines
+  const pemContent = process.env.MONGO_DB_CERD_PEM.replace(/\\n/g, '\n');
+  
+  // Write the environment variable content to the temporary file
   try {
-    fs.writeFileSync(tempFilePath, process.env.MONGO_DB_CERD_PEM);
+    fs.writeFileSync(tempFilePath, pemContent);
     credentialsPath = tempFilePath;
     console.log("Using PEM credentials from environment variable and temporary file.");
   } catch (error) {
@@ -48,8 +49,11 @@ const client = new MongoClient(MONGO_URI, {
 const connectMongoose = async () => {
   try {
     await mongoose.connect(MONGO_URI, {
-      tlsCertificateKeyFile: credentials,
-      dbName: DB_NAME
+      tlsCertificateKeyFile: credentialsPath,
+      dbName: DB_NAME,
+      serverSelectionTimeoutMS: 30000,
+      socketTimeoutMS: 45000,
+      bufferMaxEntries: 0
     });
     console.log('Mongoose connected to MongoDB');
   } catch (error) {
