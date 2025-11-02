@@ -1,5 +1,8 @@
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const mongoose = require('mongoose');
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 require('dotenv').config();
 
 const credentials = process.env.MONGO_DB_CERD_PEM || './X509-cert.pem';
