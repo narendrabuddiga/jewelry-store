@@ -17,14 +17,12 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(logger);
 
-
 // Status routes
 app.use('/', statusRoutes);
 
 // API Routes
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
-
 
 // 404 handler
 app.use('*', (req, res) => {
@@ -39,37 +37,23 @@ const PORT = process.env.PORT || 5001;
 
 const startServer = async () => {
   try {
-    console.log('🔌 Initializing database connection...');
-    
-    // Connect to database with caching
-    await connectMongoose();
-    
-    // Wait and verify database is actually connected
-    let attempts = 0;
-    const maxAttempts = 10;
-    
-    while (!isConnected() && attempts < maxAttempts) {
-      console.log(`⏳ Waiting for database connection... (${attempts + 1}/${maxAttempts})`);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      attempts++;
-    }
-    
-    if (!isConnected()) {
-      throw new Error('Database connection failed after maximum attempts');
-    }
-    
-    console.log('✅ Database connection verified - ready to start server');
-    
-    // Start keep-alive mechanism
-    keepAlive();
-    
-    app.listen(PORT, '0.0.0.0', () => {
+    // Connect to database in background
+    console.log('🔌 Connecting to database in background...');
+    connectMongoose()
+      .then(() => {
+        console.log('✅ Database connected successfully');
+        keepAlive();
+        console.log('✨ Server is fully ready');
+      })
+      .catch(error => {
+        console.error('❌ Database connection failed:', error.message);
+      });
+
+      app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📊 Health check: http://localhost:${PORT}/health`);
       console.log(`🛍️  API Base URL: http://localhost:${PORT}/api`);
-      console.log('✨ Server is ready to accept requests');
     });
-
   } catch (error) {
     console.error('❌ Failed to start server:', error.message);
     process.exit(1);
@@ -89,5 +73,5 @@ process.on('SIGTERM', async () => {
   process.exit(0);
 });
 
-// Export for testing
+
 startServer();
