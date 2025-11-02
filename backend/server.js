@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
-const { connectMongoose } = require('./config/database');
+const { connectMongoose, testConnection } = require('./config/database');
 const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const errorHandler = require('./middleware/errorHandler');
@@ -108,17 +108,33 @@ const PORT = process.env.PORT || 5001;
 
 const startServer = async () => {
   try {
+    console.log('🔌 Initializing database connection...');
+    
+    // Connect to database with retry logic
     await connectMongoose();
+    
+    // Verify database is accessible
+    console.log('🔍 Verifying database accessibility...');
+    const mongoose = require('mongoose');
+    
+    // Test a simple query to ensure everything works
+    try {
+      await mongoose.connection.db.admin().ping();
+      console.log('✅ Database is ready and accessible');
+    } catch (dbError) {
+      throw new Error(`Database verification failed: ${dbError.message}`);
+    }
     
     const server = app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📊 Health check: http://localhost:${PORT}/health`);
       console.log(`🛍️  API Base URL: http://localhost:${PORT}/api`);
+      console.log('✨ Server is ready to accept requests');
     });
 
     return server;
   } catch (error) {
-    console.error('Failed to start server:', error);
+    console.error('❌ Failed to start server:', error.message);
     process.exit(1);
   }
 };

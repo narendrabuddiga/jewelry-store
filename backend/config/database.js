@@ -47,24 +47,64 @@ if (AUTH_TYPE === 'PEM') {
 // MongoDB Native Client
 const client = new MongoClient(MONGO_URI, connectionOptions);
 
-// Mongoose Connection
-const connectMongoose = async () => {
+// Test database connection
+const testConnection = async () => {
   try {
-    const mongooseOptions = {
-      dbName: DB_NAME,
-      serverSelectionTimeoutMS: 30000,
-      socketTimeoutMS: 45000
-    };
-    
-    if (AUTH_TYPE === 'PEM') {
-      mongooseOptions.tlsCertificateKeyFile = credentialsPath;
-    }
-    
-    await mongoose.connect(MONGO_URI, mongooseOptions);
-    console.log('Mongoose connected to MongoDB');
+    await client.connect();
+    const db = client.db(DB_NAME);
+    await db.admin().ping();
+    console.log('✅ Database connection test successful');
+    await client.close();
+    return true;
   } catch (error) {
-    console.error('Mongoose connection error:', error);
-    process.exit(1);
+    console.error('❌ Database connection test failed:', error.message);
+    return false;
+  }
+};
+
+// Mongoose Connection with retry
+const connectMongoose = async (retries = 3) => {
+  const mongooseOptions = {
+    dbName: DB_NAME,
+    serverSelectionTimeoutMS: 10000,
+    socketTimeoutMS: 45000,
+    bufferCommands: false,
+    maxPoolSize: 10
+  };
+  
+  if (AUTH_TYPE === 'PEM') {
+    mongooseOptions.tlsCertificateKeyFile = credentialsPath;
+  }
+  
+  for (let i = 0; i < retries; i++) {
+    try {
+      console.log(`🔄 Attempting database connection (${i + 1}/${retries})...`);
+      
+      // Test connection first
+      const testPassed = await testConnection();
+      if (!testPassed) {
+        throw new Error('Connection test failed');
+      }
+      
+      await mongoose.connect(MONGO_URI, mongooseOptions);
+      
+      // Verify connection is ready
+      if (mongoose.connection.readyState === 1) {
+        console.log('✅ Mongoose connected to MongoDB successfully');
+        return true;
+      }
+      
+    } catch (error) {
+      console.error(`❌ Connection attempt ${i + 1} failed:`, error.message);
+      
+      if (i === retries - 1) {
+        console.error('🚫 All connection attempts failed. Exiting...');
+        process.exit(1);
+      }
+      
+      console.log(`⏳ Retrying in 2 seconds...`);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
   }
 };
 
@@ -93,5 +133,6 @@ module.exports = {
   connectMongoose,
   connectMongoDB,
   closeMongoDB,
+  testConnection,
   client
 };
