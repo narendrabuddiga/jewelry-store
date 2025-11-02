@@ -5,48 +5,62 @@ const os = require('os');
 const path = require('path');
 require('dotenv').config();
 
-const MONGO_URI = process.env.MONGO_URI;
+const AUTH_TYPE = process.env.DB_AUTH_TYPE || 'USERNAME';
+const MONGO_URI = AUTH_TYPE === 'PEM' ? process.env.MONGO_URI_PEM : process.env.MONGO_URI_USR;
 const DB_NAME = process.env.DB_NAME || 'jewelryStore';
 
-// Determine if we are using an environment variable or a local file
+let connectionOptions = { serverApi: ServerApiVersion.v1 };
 let credentialsPath;
 
-// Check if it's a file path or certificate content
-if (fs.existsSync(process.env.MONGO_DB_CERD_PEM)) {
-  // It's a file path
-  credentialsPath = process.env.MONGO_DB_CERD_PEM;
-  console.log("Using PEM file path from environment variable.");
-} else {
-  // It's certificate content, create temporary file
-  const tempFilePath = path.join(os.tmpdir(), `temp-cert-${Date.now()}.pem`);
-  const pemContent = process.env.MONGO_DB_CERD_PEM.replace(/\\n/g, '\n');
-
-  try {
-    fs.writeFileSync(tempFilePath, pemContent);
-    credentialsPath = tempFilePath;
-    console.log("Using PEM credentials from environment variable content.");
-  } catch (error) {
-    console.error("Error writing PEM file from environment variable:", error);
+if (AUTH_TYPE === 'PEM') {
+  console.log('Using PEM certificate authentication');
+  
+  const fallbackCertPath = path.join(process.cwd(), 'X509-cert-7200026180222304758.pem');
+  
+  if (process.env.MONGO_DB_CERD_PEM) {
+    if (fs.existsSync(process.env.MONGO_DB_CERD_PEM)) {
+      credentialsPath = process.env.MONGO_DB_CERD_PEM;
+      console.log("Using PEM file path from environment variable.");
+    } else {
+      const tempFilePath = path.join(os.tmpdir(), `temp-cert-${Date.now()}.pem`);
+      const pemContent = process.env.MONGO_DB_CERD_PEM.replace(/\\n/g, '\n');
+      
+      try {
+        fs.writeFileSync(tempFilePath, pemContent);
+        credentialsPath = tempFilePath;
+        console.log("Using PEM credentials from environment variable content.");
+      } catch (error) {
+        console.error("Error writing PEM file from environment variable:", error);
+        credentialsPath = fallbackCertPath;
+      }
+    }
+  } else {
     credentialsPath = fallbackCertPath;
+    console.log("Using local X509-cert.pem file.");
   }
+  
+  connectionOptions.tlsCertificateKeyFile = credentialsPath;
+} else {
+  console.log('Using username/password authentication');
 }
 
-
 // MongoDB Native Client
-const client = new MongoClient(MONGO_URI, {
-  tlsCertificateKeyFile: credentialsPath,
-  serverApi: ServerApiVersion.v1
-});
+const client = new MongoClient(MONGO_URI, connectionOptions);
 
 // Mongoose Connection
 const connectMongoose = async () => {
   try {
-    await mongoose.connect(MONGO_URI, {
-      tlsCertificateKeyFile: credentialsPath,
+    const mongooseOptions = {
       dbName: DB_NAME,
       serverSelectionTimeoutMS: 30000,
       socketTimeoutMS: 45000
-    });
+    };
+    
+    if (AUTH_TYPE === 'PEM') {
+      mongooseOptions.tlsCertificateKeyFile = credentialsPath;
+    }
+    
+    await mongoose.connect(MONGO_URI, mongooseOptions);
     console.log('Mongoose connected to MongoDB');
   } catch (error) {
     console.error('Mongoose connection error:', error);
