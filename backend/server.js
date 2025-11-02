@@ -13,7 +13,11 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://127.0.0.1:3000', /^https?:\/\/.*\.vercel\.app$/],
+  origin: [
+    'http://localhost:3000', 
+    'http://127.0.0.1:3000', 
+    'https://jewelry-store-frontend.vercel.app',
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
