@@ -63,14 +63,13 @@ const startServer = async () => {
     // Start keep-alive mechanism
     keepAlive();
     
-    const server = app.listen(PORT, '0.0.0.0', () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📊 Health check: http://localhost:${PORT}/health`);
       console.log(`🛍️  API Base URL: http://localhost:${PORT}/api`);
       console.log('✨ Server is ready to accept requests');
     });
 
-    return server;
   } catch (error) {
     console.error('❌ Failed to start server:', error.message);
     process.exit(1);
@@ -91,8 +90,4 @@ process.on('SIGTERM', async () => {
 });
 
 // Export for testing
-if (require.main === module) {
-  startServer();
-} else {
-  module.exports = app;
-}
+startServer();
