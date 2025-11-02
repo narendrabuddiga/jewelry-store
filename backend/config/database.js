@@ -6,9 +6,38 @@ const credentials = process.env.MONGO_DB_CERD_PEM || './X509-cert.pem';
 const MONGO_URI = process.env.MONGO_URI;
 const DB_NAME = process.env.DB_NAME || 'jewelryStore';
 
+// Define the path for the local fallback file
+const fallbackCertPath = path.join(process.cwd(), './X509-cert.pem');
+
+// Determine if we are using an environment variable or a local file
+let credentialsPath;
+
+if (process.env.MONGO_DB_CERD_PEM) {
+  // 1. Create a temporary file path
+  // Use os.tmpdir() to ensure you write to a directory the process has permission for (especially in serverless environments)
+  const tempFilePath = path.join(os.tmpdir(), `temp-cert-${Date.now()}.pem`);
+  
+  // 2. Write the environment variable content to the temporary file
+  try {
+    fs.writeFileSync(tempFilePath, process.env.MONGO_DB_CERD_PEM);
+    credentialsPath = tempFilePath;
+    console.log("Using PEM credentials from environment variable and temporary file.");
+  } catch (error) {
+    console.error("Error writing PEM file from environment variable:", error);
+    // Fall back to the local file if writing fails
+    credentialsPath = fallbackCertPath;
+  }
+
+} else {
+  // Use the local file path as defined in your original code
+  credentialsPath = fallbackCertPath;
+  console.log("Using local X509-cert.pem file.");
+}
+
+
 // MongoDB Native Client
 const client = new MongoClient(MONGO_URI, {
-  tlsCertificateKeyFile: credentials,
+  tlsCertificateKeyFile: credentialsPath,
   serverApi: ServerApiVersion.v1
 });
 
