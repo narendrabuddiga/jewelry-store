@@ -8,34 +8,27 @@ require('dotenv').config();
 const MONGO_URI = process.env.MONGO_URI;
 const DB_NAME = process.env.DB_NAME || 'jewelryStore';
 
-// Define the path for the local fallback file
-const fallbackCertPath = path.join(process.cwd(), 'X509-cert-7200026180222304758.pem');
-
 // Determine if we are using an environment variable or a local file
 let credentialsPath;
 
-if (process.env.MONGO_DB_CERD_PEM) {
-  // Create a temporary file path
+// Check if it's a file path or certificate content
+if (fs.existsSync(process.env.MONGO_DB_CERD_PEM)) {
+  // It's a file path
+  credentialsPath = process.env.MONGO_DB_CERD_PEM;
+  console.log("Using PEM file path from environment variable.");
+} else {
+  // It's certificate content, create temporary file
   const tempFilePath = path.join(os.tmpdir(), `temp-cert-${Date.now()}.pem`);
-  
-  // Convert \n escape sequences to actual newlines
   const pemContent = process.env.MONGO_DB_CERD_PEM.replace(/\\n/g, '\n');
-  
-  // Write the environment variable content to the temporary file
+
   try {
     fs.writeFileSync(tempFilePath, pemContent);
     credentialsPath = tempFilePath;
-    console.log("Using PEM credentials from environment variable and temporary file.");
+    console.log("Using PEM credentials from environment variable content.");
   } catch (error) {
     console.error("Error writing PEM file from environment variable:", error);
-    // Fall back to the local file if writing fails
     credentialsPath = fallbackCertPath;
   }
-
-} else {
-  // Use the local file path as defined in your original code
-  credentialsPath = fallbackCertPath;
-  console.log("Using local X509-cert.pem file.");
 }
 
 
@@ -52,8 +45,7 @@ const connectMongoose = async () => {
       tlsCertificateKeyFile: credentialsPath,
       dbName: DB_NAME,
       serverSelectionTimeoutMS: 30000,
-      socketTimeoutMS: 45000,
-      bufferMaxEntries: 0
+      socketTimeoutMS: 45000
     });
     console.log('Mongoose connected to MongoDB');
   } catch (error) {
