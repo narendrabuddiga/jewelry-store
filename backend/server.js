@@ -42,6 +42,11 @@ const startServer = async () => {
     connectMongoose()
       .then(() => {
         console.log('✅ Database connected successfully');
+        app.listen(PORT, '0.0.0.0', () => {
+          console.log(`🚀 Server running on port ${PORT}`);
+          console.log(`📊 Health check: http://localhost:${PORT}/health`);
+          console.log(`🛍️  API Base URL: http://localhost:${PORT}/api`);
+        });
         keepAlive();
         console.log('✨ Server is fully ready');
       })
@@ -49,11 +54,6 @@ const startServer = async () => {
         console.error('❌ Database connection failed:', error.message);
       });
 
-      app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📊 Health check: http://localhost:${PORT}/health`);
-      console.log(`🛍️  API Base URL: http://localhost:${PORT}/api`);
-    });
   } catch (error) {
     console.error('❌ Failed to start server:', error.message);
     process.exit(1);
@@ -72,6 +72,5 @@ process.on('SIGTERM', async () => {
   await closeConnection();
   process.exit(0);
 });
-
 
 startServer();
