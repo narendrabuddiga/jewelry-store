@@ -15,8 +15,6 @@ let credentialsPath;
 if (AUTH_TYPE === 'PEM') {
   console.log('Using PEM certificate authentication');
   
-  const fallbackCertPath = path.join(process.cwd(), 'X509-cert-7200026180222304758.pem');
-  
   if (process.env.MONGO_DB_CERD_PEM) {
     if (fs.existsSync(process.env.MONGO_DB_CERD_PEM)) {
       credentialsPath = process.env.MONGO_DB_CERD_PEM;
@@ -31,12 +29,11 @@ if (AUTH_TYPE === 'PEM') {
         console.log("Using PEM credentials from environment variable content.");
       } catch (error) {
         console.error("Error writing PEM file from environment variable:", error);
-        credentialsPath = fallbackCertPath;
+        throw error;
       }
     }
   } else {
-    credentialsPath = fallbackCertPath;
-    console.log("Using local X509-cert.pem file.");
+    throw new Error('PEM certificate not provided in environment variables');
   }
   
   connectionOptions.tlsCertificateKeyFile = credentialsPath;
@@ -46,21 +43,6 @@ if (AUTH_TYPE === 'PEM') {
 
 // MongoDB Native Client
 const client = new MongoClient(MONGO_URI, connectionOptions);
-
-// Test database connection
-const testConnection = async () => {
-  try {
-    await client.connect();
-    const db = client.db(DB_NAME);
-    await db.admin().ping();
-    console.log('✅ Database connection test successful');
-    await client.close();
-    return true;
-  } catch (error) {
-    console.error('❌ Database connection test failed:', error.message);
-    return false;
-  }
-};
 
 // Mongoose Connection with retry
 const connectMongoose = async (retries = 3) => {
@@ -80,15 +62,8 @@ const connectMongoose = async (retries = 3) => {
     try {
       console.log(`🔄 Attempting database connection (${i + 1}/${retries})...`);
       
-      // Test connection first
-      const testPassed = await testConnection();
-      if (!testPassed) {
-        throw new Error('Connection test failed');
-      }
-      
       await mongoose.connect(MONGO_URI, mongooseOptions);
       
-      // Verify connection is ready
       if (mongoose.connection.readyState === 1) {
         console.log('✅ Mongoose connected to MongoDB successfully');
         return true;
@@ -133,6 +108,5 @@ module.exports = {
   connectMongoose,
   connectMongoDB,
   closeMongoDB,
-  testConnection,
   client
 };
