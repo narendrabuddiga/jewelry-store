@@ -16,6 +16,15 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(logger);
 
+// Database connection check middleware
+app.use('/api', (req, res, next) => {
+  const mongoose = require('mongoose');
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({ error: 'Database not connected' });
+  }
+  next();
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
@@ -121,6 +130,37 @@ const startServer = async () => {
     try {
       await mongoose.connection.db.admin().ping();
       console.log('✅ Database is ready and accessible');
+      
+      // Ensure sample data exists
+      const Product = require('./models/Product');
+      const count = await Product.countDocuments();
+      if (count === 0) {
+        console.log('📦 Inserting sample data...');
+        const sampleProducts = [
+          {
+            name: 'Diamond Ring',
+            category: 'rings',
+            metal: 'gold',
+            weight: 5.5,
+            price: 45000,
+            stock: 8,
+            description: 'Beautiful diamond ring'
+          },
+          {
+            name: 'Gold Necklace',
+            category: 'necklaces',
+            metal: 'gold',
+            weight: 15.2,
+            price: 38000,
+            stock: 12,
+            description: 'Elegant gold necklace'
+          }
+        ];
+        await Product.insertMany(sampleProducts);
+        console.log('✅ Sample data inserted');
+      } else {
+        console.log(`📊 Found ${count} products in database`);
+      }
     } catch (dbError) {
       throw new Error(`Database verification failed: ${dbError.message}`);
     }
