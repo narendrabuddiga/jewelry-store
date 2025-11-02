@@ -44,6 +44,22 @@ const startServer = async () => {
     // Connect to database with caching
     await connectMongoose();
     
+    // Wait and verify database is actually connected
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    while (!isConnected() && attempts < maxAttempts) {
+      console.log(`⏳ Waiting for database connection... (${attempts + 1}/${maxAttempts})`);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      attempts++;
+    }
+    
+    if (!isConnected()) {
+      throw new Error('Database connection failed after maximum attempts');
+    }
+    
+    console.log('✅ Database connection verified - ready to start server');
+    
     // Start keep-alive mechanism
     keepAlive();
     
