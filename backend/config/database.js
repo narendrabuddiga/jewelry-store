@@ -76,16 +76,13 @@ const connectMongoose = async () => {
 
   const mongooseOptions = {
     dbName: DB_NAME,
-    serverSelectionTimeoutMS: 5000,
-    socketTimeoutMS: 45000,
+    serverSelectionTimeoutMS: 3000,
+    socketTimeoutMS: 30000,
     bufferCommands: false,
-    maxPoolSize: 10,
-    minPoolSize: 5,
-    maxIdleTimeMS: 30000,
-    // Auto-reconnection settings
-    autoReconnect: true,
-    reconnectTries: Number.MAX_VALUE,
-    reconnectInterval: 1000
+    maxPoolSize: 5,
+    minPoolSize: 1,
+    maxIdleTimeMS: 10000,
+    connectTimeoutMS: 3000
   };
 
   try {
