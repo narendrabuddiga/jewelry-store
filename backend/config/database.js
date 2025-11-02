@@ -2,7 +2,7 @@ const { MongoClient, ServerApiVersion } = require('mongodb');
 const mongoose = require('mongoose');
 require('dotenv').config();
 
-const credentials = process.env.CERT_PATH || './X509-cert.pem';
+const credentials = process.env.MONGO_DB_CERD_PEM || './X509-cert.pem';
 const MONGO_URI = process.env.MONGO_URI;
 const DB_NAME = process.env.DB_NAME || 'jewelryStore';
 
