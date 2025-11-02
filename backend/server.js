@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
-const { connectMongoose, isConnected, testConnection } = require('./config/database');
+const { connectMongoose, isConnected, closeConnection } = require('./config/database');
 const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const errorHandler = require('./middleware/errorHandler');
@@ -112,13 +112,8 @@ const startServer = async () => {
   try {
     console.log('🔌 Initializing database connection...');
     
-    // Connect to database with retry logic
+    // Connect to database with caching
     await connectMongoose();
-    
-    // Final verification before starting server
-    if (!isConnected()) {
-      throw new Error('Database connection verification failed');
-    }
     
     console.log('📦 Checking sample data...');
     const Product = require('./models/Product');
@@ -168,11 +163,13 @@ const startServer = async () => {
 // Graceful shutdown
 process.on('SIGINT', async () => {
   console.log('\n🛑 Shutting down server...');
+  await closeConnection();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
   console.log('\n🛑 Shutting down server...');
+  await closeConnection();
   process.exit(0);
 });
 
