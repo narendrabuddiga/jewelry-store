@@ -5,6 +5,7 @@ require('dotenv').config();
 const { connectMongoose, isConnected, closeConnection } = require('./config/database');
 const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
+const statusRoutes = require('./routes/statusRoutes');
 const errorHandler = require('./middleware/errorHandler');
 const logger = require('./middleware/logger');
 
@@ -17,16 +18,12 @@ app.use(express.urlencoded({ extended: true }));
 app.use(logger);
 
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
-});
+// Status routes
+app.use('/', statusRoutes);
 
 // API Routes
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
-
-app.use('/api/db', connectMongoose);
 
 
 // 404 handler
