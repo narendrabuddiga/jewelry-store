@@ -54,12 +54,9 @@ const connectMongoose = async () => {
     serverSelectionTimeoutMS: 5000,
     socketTimeoutMS: 45000,
     bufferCommands: false,
-    bufferMaxEntries: 0,
-    bufferTimeoutMS: 30000,
     maxPoolSize: 10,
     minPoolSize: 5,
-    maxIdleTimeMS: 30000,
-    serverSelectionRetryDelayMS: 2000
+    maxIdleTimeMS: 30000
   };
 
   try {
