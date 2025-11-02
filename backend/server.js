@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
-const { connectMongoose, testConnection } = require('./config/database');
+const { connectMongoose, isConnected, testConnection } = require('./config/database');
 const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const errorHandler = require('./middleware/errorHandler');
@@ -16,14 +16,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(logger);
 
-// Database connection check middleware
-app.use('/api', (req, res, next) => {
-  const mongoose = require('mongoose');
-  if (mongoose.connection.readyState !== 1) {
-    return res.status(503).json({ error: 'Database not connected' });
-  }
-  next();
-});
+
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -122,47 +115,40 @@ const startServer = async () => {
     // Connect to database with retry logic
     await connectMongoose();
     
-    // Verify database is accessible
-    console.log('🔍 Verifying database accessibility...');
-    const mongoose = require('mongoose');
+    // Final verification before starting server
+    if (!isConnected()) {
+      throw new Error('Database connection verification failed');
+    }
     
-    // Test a simple query to ensure everything works
-    try {
-      await mongoose.connection.db.admin().ping();
-      console.log('✅ Database is ready and accessible');
-      
-      // Ensure sample data exists
-      const Product = require('./models/Product');
-      const count = await Product.countDocuments();
-      if (count === 0) {
-        console.log('📦 Inserting sample data...');
-        const sampleProducts = [
-          {
-            name: 'Diamond Ring',
-            category: 'rings',
-            metal: 'gold',
-            weight: 5.5,
-            price: 45000,
-            stock: 8,
-            description: 'Beautiful diamond ring'
-          },
-          {
-            name: 'Gold Necklace',
-            category: 'necklaces',
-            metal: 'gold',
-            weight: 15.2,
-            price: 38000,
-            stock: 12,
-            description: 'Elegant gold necklace'
-          }
-        ];
-        await Product.insertMany(sampleProducts);
-        console.log('✅ Sample data inserted');
-      } else {
-        console.log(`📊 Found ${count} products in database`);
-      }
-    } catch (dbError) {
-      throw new Error(`Database verification failed: ${dbError.message}`);
+    console.log('📦 Checking sample data...');
+    const Product = require('./models/Product');
+    const count = await Product.countDocuments();
+    if (count === 0) {
+      console.log('📦 Inserting sample data...');
+      const sampleProducts = [
+        {
+          name: 'Diamond Ring',
+          category: 'rings',
+          metal: 'gold',
+          weight: 5.5,
+          price: 45000,
+          stock: 8,
+          description: 'Beautiful diamond ring'
+        },
+        {
+          name: 'Gold Necklace',
+          category: 'necklaces',
+          metal: 'gold',
+          weight: 15.2,
+          price: 38000,
+          stock: 12,
+          description: 'Elegant gold necklace'
+        }
+      ];
+      await Product.insertMany(sampleProducts);
+      console.log('✅ Sample data inserted');
+    } else {
+      console.log(`📊 Found ${count} products in database`);
     }
     
     const server = app.listen(PORT, '0.0.0.0', () => {
