@@ -1,0 +1,23 @@
+Mongoose connected to MongoDB
+🚀 Server running on port 5001
+📊 Health check: http://localhost:5001/health
+🛍️  API Base URL: http://localhost:5001/api
+[2025-11-02T09:11:09.902Z] GET /api/products - ::1
+[2025-11-02T09:11:09.911Z] GET /api/orders - ::1
+[2025-11-02T09:11:09.994Z] GET /api/orders - ::1
+[2025-11-02T09:11:10.035Z] GET /api/products - ::1
+[2025-11-02T09:11:23.136Z] GET /api/products - ::1
+[2025-11-02T09:17:31.705Z] GET /api/orders - ::1
+[2025-11-02T09:17:38.299Z] GET /api/products - ::1
+[2025-11-02T09:21:01.758Z] GET /api/products - ::1
+[2025-11-02T09:21:01.773Z] GET /api/orders - ::1
+[2025-11-02T09:21:01.811Z] GET /api/products - ::1
+[2025-11-02T09:21:02.332Z] GET /api/orders - ::1
+[2025-11-02T09:21:02.667Z] GET /api/products - ::1
+[2025-11-02T09:21:02.669Z] GET /api/orders - ::1
+[2025-11-02T09:21:02.693Z] GET /api/products - ::1
+[2025-11-02T09:21:02.703Z] GET /api/orders - ::1
+[2025-11-02T09:27:37.405Z] GET /api/products - ::1
+[2025-11-02T09:27:37.409Z] GET /api/orders - ::1
+
+🛑 Shutting down server...

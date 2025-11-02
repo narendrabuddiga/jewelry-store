@@ -1,0 +1,17 @@
+Mongoose connected to MongoDB
+🚀 Server running on port 5001
+📊 Health check: http://localhost:5001/health
+🛍️  API Base URL: http://localhost:5001/api
+[2025-11-02T09:28:03.996Z] GET /health - 127.0.0.1
+[2025-11-02T09:28:04.021Z] GET /api/products - 127.0.0.1
+[2025-11-02T09:28:13.440Z] GET /api/products - 127.0.0.1
+[2025-11-02T09:28:13.446Z] GET /api/orders - 127.0.0.1
+[2025-11-02T09:28:13.472Z] GET /api/products - 127.0.0.1
+[2025-11-02T09:28:13.485Z] GET /api/orders - 127.0.0.1
+[2025-11-02T09:28:27.199Z] GET / - 192.168.1.10
+[2025-11-02T09:28:27.382Z] GET /favicon.ico - 192.168.1.10
+[2025-11-02T09:28:31.267Z] GET /health - 192.168.1.10
+[2025-11-02T09:28:57.219Z] GET /api/products - 192.168.1.10
+[2025-11-02T09:28:57.229Z] GET /api/orders - 192.168.1.10
+[2025-11-02T09:28:57.259Z] GET /api/products - 192.168.1.10
+[2025-11-02T09:28:57.261Z] GET /api/orders - 192.168.1.10
