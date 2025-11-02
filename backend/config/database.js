@@ -7,6 +7,9 @@ const DB_NAME = process.env.DB_NAME || 'jewelryStore';
 
 console.log('Using username/password authentication');
 
+// Global connection cache for serverless environments
+let cachedConnection = null;
+
 // MongoDB Native Client
 const client = new MongoClient(MONGO_URI, {
   serverApi: ServerApiVersion.v1
@@ -14,17 +17,13 @@ const client = new MongoClient(MONGO_URI, {
 
 // Check if database is connected
 const isConnected = () => {
-  const state = mongoose.connection.readyState;
-  console.log(`📊 Database connection state: ${state} (0=disconnected, 1=connected, 2=connecting, 3=disconnecting)`);
-  return state === 1;
+  return mongoose.connection.readyState === 1;
 };
 
 // Test database connection
 const testConnection = async () => {
   try {
-    console.log('🔍 Testing database connection...');
     await mongoose.connection.db.admin().ping();
-    console.log('✅ Database ping successful');
     return true;
   } catch (error) {
     console.error('❌ Database ping failed:', error.message);
@@ -32,49 +31,63 @@ const testConnection = async () => {
   }
 };
 
-// Mongoose Connection with retry
-const connectMongoose = async (retries = 3) => {
-  console.log(`🔗 Connecting to: ${MONGO_URI.replace(/\/\/.*@/, '//***:***@')}`);
+// Cached Mongoose Connection for serverless
+const connectMongoose = async () => {
+  // Return cached connection if available
+  if (cachedConnection && isConnected()) {
+    console.log('🔄 Using cached database connection');
+    return cachedConnection;
+  }
+
+  // If connection exists but not ready, wait for it
+  if (cachedConnection) {
+    console.log('⏳ Waiting for existing connection...');
+    return cachedConnection;
+  }
+
+  console.log('🔗 Creating new database connection...');
+  console.log(`📡 Connecting to: ${MONGO_URI.replace(/\/\/.*@/, '//***:***@')}`);
   console.log(`📂 Database: ${DB_NAME}`);
-  
+
   const mongooseOptions = {
     dbName: DB_NAME,
-    serverSelectionTimeoutMS: 10000,
+    serverSelectionTimeoutMS: 5000,
     socketTimeoutMS: 45000,
     bufferCommands: false,
-    maxPoolSize: 10
+    bufferMaxEntries: 0,
+    bufferTimeoutMS: 30000,
+    maxPoolSize: 10,
+    minPoolSize: 5,
+    maxIdleTimeMS: 30000,
+    serverSelectionRetryDelayMS: 2000
   };
-  
-  for (let i = 0; i < retries; i++) {
-    try {
-      console.log(`🔄 Attempting database connection (${i + 1}/${retries})...`);
+
+  try {
+    // Cache the connection promise
+    cachedConnection = mongoose.connect(MONGO_URI, mongooseOptions);
+    
+    // Wait for connection to complete
+    await cachedConnection;
+    
+    if (isConnected()) {
+      console.log('✅ Database connected successfully');
       
-      await mongoose.connect(MONGO_URI, mongooseOptions);
-      
-      if (isConnected()) {
-        console.log('✅ Mongoose connected to MongoDB successfully');
-        
-        // Test the connection
-        const testPassed = await testConnection();
-        if (testPassed) {
-          console.log('🎯 Database is ready for operations');
-          return true;
-        } else {
-          throw new Error('Database connection test failed');
-        }
+      // Test the connection
+      const testPassed = await testConnection();
+      if (testPassed) {
+        console.log('🎯 Database is ready for operations');
+        return cachedConnection;
+      } else {
+        throw new Error('Database connection test failed');
       }
-      
-    } catch (error) {
-      console.error(`❌ Connection attempt ${i + 1} failed:`, error.message);
-      
-      if (i === retries - 1) {
-        console.error('🚫 All connection attempts failed. Exiting...');
-        process.exit(1);
-      }
-      
-      console.log(`⏳ Retrying in 2 seconds...`);
-      await new Promise(resolve => setTimeout(resolve, 2000));
+    } else {
+      throw new Error('Database connection failed');
     }
+    
+  } catch (error) {
+    console.error('❌ Database connection failed:', error.message);
+    cachedConnection = null; // Reset cache on failure
+    throw error;
   }
 };
 
@@ -99,10 +112,20 @@ const closeMongoDB = async () => {
   }
 };
 
+// Graceful shutdown
+const closeConnection = async () => {
+  if (cachedConnection) {
+    await mongoose.connection.close();
+    cachedConnection = null;
+    console.log('🔌 Database connection closed');
+  }
+};
+
 module.exports = {
   connectMongoose,
   connectMongoDB,
   closeMongoDB,
+  closeConnection,
   isConnected,
   testConnection,
   client
