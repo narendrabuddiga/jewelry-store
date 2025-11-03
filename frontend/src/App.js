@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Search, ShoppingCart, Diamond, User, Home, X, Minus, Menu } from 'lucide-react';
+import { v4 as uuidv4 } from 'uuid';
 
 const API_URL = process.env.REACT_APP_API_URL || `http://${window.location.hostname}:5001/api`;
 
@@ -18,6 +19,7 @@ export default function JewelryStoreApp() {
   const [customerInfo, setCustomerInfo] = useState({ name: '', email: '', phone: '', address: '' });
   const [showCheckout, setShowCheckout] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '', category: 'rings', metal: 'gold', weight: '', price: '', stock: '', description: '', image: ''
   });
@@ -183,10 +185,15 @@ export default function JewelryStoreApp() {
   };
 
   const handleCheckout = async () => {
+    if (isSubmitting) return;
+    
     if (!customerInfo.name || !customerInfo.email || !customerInfo.phone || !customerInfo.address) {
       alert('Please fill in all customer information');
       return;
     }
+
+    setIsSubmitting(true);
+    const idempotencyKey = uuidv4();
 
     const orderData = {
       customer: customerInfo,
@@ -199,7 +206,8 @@ export default function JewelryStoreApp() {
         weight: item.weight
       })),
       total: getTotalPrice(),
-      status: 'pending'
+      status: 'pending',
+      idempotencyKey
     };
 
     try {
@@ -225,6 +233,7 @@ export default function JewelryStoreApp() {
       alert('Failed to place order');
     } finally {
       setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
