@@ -58,6 +58,11 @@ const orderSchema = new mongoose.Schema({
     enum: ['pending', 'processing', 'completed', 'cancelled'],
     default: 'pending'
   },
+  idempotencyKey: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -77,5 +82,6 @@ orderSchema.pre('save', function(next) {
 // Index for better query performance
 orderSchema.index({ status: 1, createdAt: -1 });
 orderSchema.index({ 'customer.email': 1 });
+orderSchema.index({ idempotencyKey: 1 });
 
 module.exports = mongoose.model('Order', orderSchema);
