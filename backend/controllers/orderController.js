@@ -38,10 +38,20 @@ const getOrderById = async (req, res) => {
   }
 };
 
-// Create order
+// Create order with idempotency
 const createOrder = async (req, res) => {
   try {
-    const { items } = req.body;
+    const { items, idempotencyKey } = req.body;
+    
+    // Check for duplicate order using idempotency key
+    if (idempotencyKey) {
+      const existingOrder = await Order.findOne({ idempotencyKey });
+      if (existingOrder) {
+        const populatedOrder = await Order.findById(existingOrder._id)
+          .populate('items.productId', 'name category metal');
+        return res.status(200).json(populatedOrder);
+      }
+    }
     
     // Validate stock availability
     for (const item of items) {
@@ -56,22 +66,44 @@ const createOrder = async (req, res) => {
       }
     }
     
-    // Update stock levels
-    for (const item of items) {
-      await Product.findByIdAndUpdate(
-        item.productId,
-        { $inc: { stock: -item.quantity } }
-      );
+    // Use transaction for atomicity
+    const session = await Order.startSession();
+    session.startTransaction();
+    
+    try {
+      // Update stock levels
+      for (const item of items) {
+        const result = await Product.findByIdAndUpdate(
+          item.productId,
+          { $inc: { stock: -item.quantity } },
+          { session, new: true }
+        );
+        
+        if (result.stock < 0) {
+          throw new Error(`Insufficient stock for ${item.name}`);
+        }
+      }
+      
+      const orderData = {
+        ...req.body,
+        idempotencyKey: idempotencyKey || undefined
+      };
+      
+      const order = new Order(orderData);
+      await order.save({ session });
+      
+      await session.commitTransaction();
+      
+      const populatedOrder = await Order.findById(order._id)
+        .populate('items.productId', 'name category metal');
+      
+      res.status(201).json(populatedOrder);
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
     }
-    
-    const order = new Order(req.body);
-    await order.save();
-    
-    // Populate the created order
-    const populatedOrder = await Order.findById(order._id)
-      .populate('items.productId', 'name category metal');
-    
-    res.status(201).json(populatedOrder);
   } catch (error) {
     if (error.name === 'ValidationError') {
       return res.status(400).json({ error: error.message });
